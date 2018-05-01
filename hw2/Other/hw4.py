@@ -12,7 +12,7 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.WARNING)
 logger.addHandler(ch)
 
-def BOPF(data):
+def BOPF():
 
     # Initial value
     # S = 100, X = 80, H = 130, t = 1 (years), s = 30%, r = 10%, n = 100, and k = 300
@@ -44,18 +44,18 @@ def BOPF(data):
     def findl(A, j, i):
         logger.debug('l not found')
         if A < Average(0, j, i):
-            logger.warning('l return 0')
+            # logger.warning('l return 0')
             return 0
         if (A >= Average(k, j, i)):
-            logger.warning('l return k')
+            # logger.warning('l return k')
             return k
         for l in range(k):
             if Average(l, j, i) <= A and A <= Average(l+1, j, i):
                 return l
-        logger.warning('l not found')
+        # logger.warning('l not found')
         return 0
 
-    C = [[max(0, Average(m, n, i) - X) * (Average(m, n, i) < H) for m in xrange(k+1)] for i in xrange(n+1)]
+    C = [[max(0, Average(m, n, i) - X) * (Average(m, n, i) < H) for m in range(k+1)] for i in range(n+1)]
     C = np.array(C)
     logger.debug("C: %r", C)
     D = [None] * (k+1)
@@ -68,9 +68,9 @@ def BOPF(data):
                 logger.debug("loop j=%s, i=%s, m=%s", j, i, m)
                 a = Average(m, j, i)
                 A_u = ((j+1) * a + S * u ** (j+1-i) * d ** i) / (j+2)
-                logger.debug("A_u: %s", A_u)
-                logger.debug("Amax: %s", Amax(j, i))
-                logger.debug("Amin: %s", Amin(j, i))
+                # logger.debug("A_u: %s", A_u)
+                # logger.debug("Amax: %s", Amax(j, i))
+                # logger.debug("Amin: %s", Amin(j, i))
                 l = findl(A_u, j+1, i)
                 try:
                     if l not in [0, k]:
@@ -98,3 +98,6 @@ def BOPF(data):
 
     print(C[0][0])
     print(sum(C[0]) / len(C[0]))
+
+if __name__ == "__main__":
+    BOPF()
