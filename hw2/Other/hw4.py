@@ -65,7 +65,7 @@ def BOPF():
     for j in reversed(range(n)):
         for i in range(j+1):
             for m in range(k+1):
-                logger.debug("loop j=%s, i=%s, m=%s", j, i, m)
+                logger.warning("loop j=%s, i=%s, m=%s", j, i, m)
                 a = Average(m, j, i)
                 A_u = ((j+1) * a + S * u ** (j+1-i) * d ** i) / (j+2)
                 # logger.debug("A_u: %s", A_u)
