@@ -1,5 +1,9 @@
-from math import exp, sqrt
+from math import exp, sqrt, floor, log
 import numpy as np
+
+"""
+A method without h
+"""
 
 def findA(m,j,i,S,k,u,d):
     aminji = (1 / (j+1)) * (S * ((1 - d ** (i+1)) / (1-d)) +
@@ -49,31 +53,42 @@ def findLDOWN(Ad, j, i, S, k, u, d):
 
 if __name__ == "__main__":
 
-    S = 100
-    X = 70
-    t = 2
-    sigma = 0.2
-    r1 = 0.05
-    n = 40
-    k = 5
+    S = 100     # (1) S (spot price)
+    X = 100     # (2) X (strike price)
+    H = 110     # (3) H (barrier price)
+    t = 1       # (4) T (years)
+    sigma = 0.3 # (6) s (volatility)
+    r1 = 0.05   # (5) r (risk-free interest rate)
+    n = 200     # (7) n (number of periods)
+    k = 100     # (8) k (number of buckets)
 
 
+    # Vanilla Use
     deltaT = t / n
     r = r1 * deltaT
     u = exp(sigma * sqrt(deltaT))
     d = 1 / u
     p = (exp(r) - d) / (u - d)
 
-    C = np.zeros((n+1, k+1))
-    D = np.zeros(k+1)
-    delta = 0
+    C = np.zeros((n + 1, k + 1))
+    D = np.zeros(k + 1)
+    delta_vanilla = 0
 
+    # Barrier Use
+    E = np.zeros((n + 1, k + 1))
+    delta_barrier = 0
+
+    # Process
     for i in range(0, n + 1):
         for m in range(0, k + 1):
             C[i, m] = max(0, findA(m, n, i, S, k, u, d) - X)
+            E[i, m] = max(0, findA(m, n, i, S, k, u, d) - X)
 
 
     for j in range(n-1, -1, -1):
+        print("j = ", j)
+
+        # Vanilla
         for i in range(0, j + 1):
             for m in range(0, k + 1):
                 a = findA(m, j, i, S, k, u, d)  # Average
@@ -89,16 +104,51 @@ if __name__ == "__main__":
                 Cd = x2 * C[i + 1, ldown] + (1 - x2) * C[i+1, ldown+1]   # Linear interpolation
 
                 # Calculate D
-                D[m] = max(a-X, (p * Cu + (1 - p) * Cd) * exp(-r))
+                D[m] = (p * Cu + (1 - p) * Cd) * exp(-r)
 
-                delta = (Cu-Cd) / (S*u-S*d)
+                delta_vanilla = (Cu-Cd) / (S*u-S*d)
 
-
-            # for w in range(0, k + 1):
-            #     C[i,w] = D[w]
             C[i, :] = D
 
+
+            # Barrier knock-out
+        for i in range(0, j + 1):
+            for m in range(0, k + 1):
+                a = findA(m, j, i, S, k, u, d)  # Average
+
+
+                # Up calculations
+                Au = ((j+1) * a + S * (u ** (j+ 1- i)) * (d ** i) ) / (j + 2)
+                lup, x1 = findLUP(Au, j, i, S, k, u, d)
+                Cu = x1 * E[i, lup] + (1-x1) * E[i, lup+1]   # Linear interpolation
+
+                # Down calculations
+                Ad = ((j+1) * a + S * (u ** (j-i)) * (d ** (i+1)))/(j+2)
+                ldown, x2 = findLDOWN(Ad, j, i, S, k, u, d)
+                Cd = x2 * E[i + 1, ldown] + (1 - x2) * E[i+1, ldown+1]   # Linear interpolation
+
+                # Calculate D
+                D[m] = (p * Cu + (1 - p) * Cd) * exp(-r)
+
+                delta_barrier = (Cu-Cd) / (S*u-S*d)
+
+                if a >= H:
+                    D[m] = 0
+
+            E[i, :] = D
+
+
+
+
+
     print('-------------------------')
-    print('The price is: ', C[0, 0])
-    print('Delta is: ', delta)
+    print('Vanilla price is: ', C[0, 0])
+    print('Vanilla Delta is: ', delta_vanilla)
+    print('-------------------------')
+    print('Barrier E price is: ', E[0, 0])
+    print('Vanilla Delta is: ', delta_barrier)
+    print('-------------------------')
+
+    valueTree = C[0, 0] - E[0, 0]
+    print('valueTree Value is: ', valueTree)
     print('-------------------------')
