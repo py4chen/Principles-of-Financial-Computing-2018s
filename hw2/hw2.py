@@ -2,9 +2,6 @@ from math import exp, sqrt, floor, log
 import numpy as np
 import sys
 
-
-
-
 class EuropeanArithmeticAverageRateKnockInCall:
 
     def __init__(self, S, X, H, t, sigma, r1, n, k):
@@ -33,7 +30,7 @@ class EuropeanArithmeticAverageRateKnockInCall:
         self.delta_barrier = 0
 
         # Average, for cache
-        self.A = np.empty((n + 1, n + 1, k + 1))
+        self.A = np.empty((n + 1, n + 1, k + 1)) * np.nan
 
     def findA(self, m, j, i):
         if np.isnan(self.A[j, i, m]):
@@ -143,8 +140,7 @@ class EuropeanArithmeticAverageRateKnockInCall:
 
 if __name__ == "__main__":
 
-
-    isAuto = input("Auto calculate example? (Y/N)")
+    isAuto = input("alculate example? (Y/N)")
     if(len(isAuto) == 0 or isAuto[0] == "Y" or isAuto[0] == "y"):
         # Test Case
         S = 100  # (1) S (spot price)
