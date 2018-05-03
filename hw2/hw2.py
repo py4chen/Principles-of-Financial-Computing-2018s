@@ -1,6 +1,6 @@
 from math import exp, sqrt, floor, log
 import numpy as np
-
+import sys
 
 
 
@@ -92,9 +92,10 @@ class EuropeanArithmeticAverageRateKnockInCall:
         Db = np.zeros(self.k + 1)
 
         for j in range(self.n - 1, -1, -1):
-            print("j = ", j, end='r')
+            sys.stdout.write('\r j = %d', j)
+            sys.stdout.flush()
 
-            # Vanilla
+
             for i in range(0, j + 1):
                 for m in range(0, self.k + 1):
                     a = self.findA(m, j, i)  # Average
@@ -102,16 +103,16 @@ class EuropeanArithmeticAverageRateKnockInCall:
                     # Up calculations
                     Au = ((j + 1) * a + self.S * (self.u ** (j + 1 - i)) * (self.d ** i)) / (j + 2)
                     lup, x1 = self.findLUP(Au, j, i)
-                    Cu = x1 * self.C[i, lup] + (1 - x1) * self.C[i, lup + 1]  # Linear interpolation
-                    Bu = x1 * self.B[i, lup] + (1 - x1) * self.B[i, lup + 1]  # Linear interpolation
+                    Cu = x1 * self.C[i, lup] + (1 - x1) * self.C[i, lup + 1]  # Vanilla Linear interpolation
+                    Bu = x1 * self.B[i, lup] + (1 - x1) * self.B[i, lup + 1]  # Barrier Linear interpolation
 
                     # Down calculations
                     Ad = ((j + 1) * a + self.S * (self.u ** (j - i)) * (self.d ** (i + 1))) / (j + 2)
                     ldown, x2 = self.findLDOWN(Ad, j, i)
-                    Cd = x2 * self.C[i + 1, ldown] + (1 - x2) * self.C[i + 1, ldown + 1]  # Linear interpolation
-                    Bd = x2 * self.B[i + 1, ldown] + (1 - x2) * self.B[i + 1, ldown + 1]  # Linear interpolation
+                    Cd = x2 * self.C[i + 1, ldown] + (1 - x2) * self.C[i + 1, ldown + 1]  # Vanilla Linear interpolation
+                    Bd = x2 * self.B[i + 1, ldown] + (1 - x2) * self.B[i + 1, ldown + 1]  # Barrier Linear interpolation
 
-                    # Calculate D
+                    # Calculate D & Db
                     D[m] = (self.p * Cu + (1 - self.p) * Cd) * exp(-self.r)
                     Db[m] = (self.p * Bu + (1 - self.p) * Bd) * exp(-self.r)
 
