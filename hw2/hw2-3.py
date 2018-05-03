@@ -149,6 +149,21 @@ if __name__ == "__main__":
     print('Vanilla Delta is: ', delta_barrier)
     print('-------------------------')
 
-    valueTree = C[0, 0] - E[0, 0]
-    print('valueTree Value is: ', valueTree)
+    differenceValue = C[0, 0] - E[0, 0]
+    print('differenceValue is: ', differenceValue)
+    print('differenceDelta is: ', delta_vanilla-delta_barrier)
     print('-------------------------')
+
+
+"""
+1"
+-------------------------
+Vanilla price is:  8.631127489376166
+Vanilla Delta is:  0.5637618041777994
+-------------------------
+Barrier E price is:  0.304825090845017
+Vanilla Delta is:  -0.009722096283885115
+-------------------------
+valueTree Value is:  8.326302398531148
+-------------------------
+"""
