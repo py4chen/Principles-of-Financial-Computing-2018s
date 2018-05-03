@@ -140,7 +140,7 @@ class EuropeanArithmeticAverageRateKnockInCall:
 
 if __name__ == "__main__":
 
-    isAuto = input("alculate example? (Y/N)")
+    isAuto = input("Calculate example? (Y/N)")
     if(len(isAuto) == 0 or isAuto[0] == "Y" or isAuto[0] == "y"):
         # Test Case
         S = 100  # (1) S (spot price)
@@ -174,3 +174,29 @@ if __name__ == "__main__":
 
     print("~~~~~~Start Calculate:~~~~~~")
     EuropeanArithmeticAverageRateKnockInCall(S=S, X=X, H=H, t=T, sigma=s, r1=r, n=n, k=k).price()
+
+
+"""
+S = 100  # (1) S (spot price)
+X = 100  # (2) X (strike price)
+H = 110  # (3) H (barrier price)
+T = 1  # (4) T (years)
+r = 0.05  # (5) r (risk-free interest rate)
+s = 0.3  # (6) s (volatility)
+n = 200  # (7) n (number of periods)
+k = 100  # (8) k (number of buckets)
+
+Vanilla price is:  8.631127489376166
+Vanilla Delta is:  0.5637618041777994
+-------------------------
+Barrier E price is:  0.304825090845017
+Vanilla Delta is:  -0.009722096283885115
+-------------------------
+differenceValue is:  8.326302398531148
+differenceDelta is:  0.5734839004616845
+-------------------------
+
+real    10m27.486s
+user    10m25.910s
+sys     0m0.752s
+"""
