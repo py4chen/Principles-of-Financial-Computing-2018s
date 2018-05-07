@@ -9,7 +9,7 @@ Test Environment:
     Ubuntu 16.04.3 LTS (python 3.6.5)
 
 How to run?
-    $r06922048@linux3 >> python3.6 hw1.py
+    poyao@user-desktop: >> python3.6 hw2.py
     Calculate example? (Y/N) Y [input]
     # Type Y for auto insert example data, Type N for manual insert data
     S: 100    [input]
