@@ -143,7 +143,11 @@ def BOPF():
     print("Vanilla:", V[0][0])
     print("Difference:", V[0][0] - C[0][0])
 
-
+"""
+Barrier: 0.28480283636553444
+Vanilla: 0.294358743569828
+Difference: 0.009555907204293557
+"""
 
 if __name__ == "__main__":
     BOPF()

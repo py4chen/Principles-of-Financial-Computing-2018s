@@ -1,8 +1,13 @@
-from math import exp, sqrt, floor, log
+from math import exp, sqrt
 import numpy as np
 
 """
-A method without h
+by Poyao, 3rd version of hw2
+
+Ref:
+https://github.com/pontazaricardo/Finance_European_single-barrier_knock-in_call/blob/master/Main/Main.m
+https://github.com/pontazaricardo/Finance_American_average-rate_call
+https://goo.gl/8KN2HZ
 """
 
 def findA(m,j,i,S,k,u,d):
@@ -111,7 +116,7 @@ if __name__ == "__main__":
             C[i, :] = D
 
 
-            # Barrier knock-out
+        # Barrier knock-out
         for i in range(0, j + 1):
             for m in range(0, k + 1):
                 a = findA(m, j, i, S, k, u, d)  # Average
@@ -132,13 +137,12 @@ if __name__ == "__main__":
 
                 delta_barrier = (Cu-Cd) / (S*u-S*d)
 
-                if a >= H:
+                # Note: I think it's not easy to use "h" in the bucket,
+                if a >= H: # Knock-out if average price reaches barrier price
                     D[m] = 0
 
+
             E[i, :] = D
-
-
-
 
 
     print('-------------------------')
@@ -149,21 +153,33 @@ if __name__ == "__main__":
     print('Vanilla Delta is: ', delta_barrier)
     print('-------------------------')
 
+    # Knock-in = Vanilla - Knock-out
+    # I'm not sure whether this method to calculate knock-in delta is correct
     differenceValue = C[0, 0] - E[0, 0]
     print('differenceValue is: ', differenceValue)
-    print('differenceDelta is: ', delta_vanilla-delta_barrier)
+    print('differenceDelta is: ', delta_vanilla - delta_barrier)
     print('-------------------------')
 
 
 """
-1"
 -------------------------
-Vanilla price is:  8.631127489376166
-Vanilla Delta is:  0.5637618041777994
+Vanilla price is:  8.63112748938
+Vanilla Delta is:  0.563761804178
 -------------------------
-Barrier E price is:  0.304825090845017
-Vanilla Delta is:  -0.009722096283885115
+Barrier E price is:  0.304825090845
+Vanilla Delta is:  -0.00972209628389
 -------------------------
-valueTree Value is:  8.326302398531148
+differenceValue is:  8.32630239853
+differenceDelta is:  0.573483900462
 -------------------------
+real    29m10.003s
+user    29m9.958s
+sys     0m0.024s
+
+
+
+
+TA's Correct Value:
+call price is 8.3514
+its delta is 0.5726
 """

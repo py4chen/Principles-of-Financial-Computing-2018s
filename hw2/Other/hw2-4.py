@@ -2,6 +2,10 @@ from math import exp, sqrt, floor, log
 import numpy as np
 import sys
 
+"""
+if a > self.H
+"""
+
 class EuropeanArithmeticAverageRateKnockInCall:
 
     def __init__(self, S, X, H, t, sigma, r1, n, k):
@@ -116,7 +120,7 @@ class EuropeanArithmeticAverageRateKnockInCall:
                     delta_vanilla = (Cu - Cd) / (self.S * self.u - self.S * self.d)
                     delta_barrier = (Bu - Bd) / (self.S * self.u - self.S * self.d)
 
-                    if a >= self.H:  # Knock-out if average price reaches barrier price
+                    if a > self.H:  # Knock-out if average price reaches barrier price
                         Db[m] = 0
 
                 self.C[i, :] = D
@@ -177,15 +181,6 @@ if __name__ == "__main__":
 
 
 """
-S = 100  # (1) S (spot price)
-X = 100  # (2) X (strike price)
-H = 110  # (3) H (barrier price)
-T = 1  # (4) T (years)
-r = 0.05  # (5) r (risk-free interest rate)
-s = 0.3  # (6) s (volatility)
-n = 200  # (7) n (number of periods)
-k = 100  # (8) k (number of buckets)
-
 Vanilla price is:  8.631127489376166
 Vanilla Delta is:  0.5637618041777994
 -------------------------
@@ -196,7 +191,7 @@ differenceValue is:  8.326302398531148
 differenceDelta is:  0.5734839004616845
 -------------------------
 
-real    10m27.486s
-user    10m25.910s
-sys     0m0.752s
+real    10m22.314s
+user    10m21.107s
+sys     0m0.633s
 """
