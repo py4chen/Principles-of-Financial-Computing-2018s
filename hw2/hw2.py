@@ -89,7 +89,7 @@ class EuropeanArithmeticAverageRateKnockInCall:
         Db = np.zeros(self.k + 1)
 
         for j in range(self.n - 1, -1, -1):
-            sys.stdout.write('\r j = %d' % j)
+            sys.stdout.write('\r j = %d      ' % j)
             sys.stdout.flush()
 
             for i in range(0, j + 1):
