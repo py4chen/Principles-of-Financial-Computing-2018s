@@ -175,26 +175,33 @@ if __name__ == "__main__":
 
 
 """
-S = 100  # (1) S (spot price)
-X = 100  # (2) X (strike price)
-H = 110  # (3) H (barrier price)
-T = 1  # (4) T (years)
-r = 0.05  # (5) r (risk-free interest rate)
-s = 0.3  # (6) s (volatility)
-n = 200  # (7) n (number of periods)
-k = 100  # (8) k (number of buckets)
-
+Calculate example? (Y/N)y
+S: 100
+X: 100
+H: 110
+T: 1
+r: 0.05
+s: 0.3
+n: 200
+k: 100
+~~~~~~Start Calculate:~~~~~~
+ j = 0
+-------------------------
 Vanilla price is:  8.631127489376166
 Vanilla Delta is:  0.5637618041777994
 -------------------------
-Barrier E price is:  0.304825090845017
-Barrier Delta is:  -0.009722096283885115
+KnockOut price is:  0.304825090845017
+KnockOut Delta is:  -0.009722096283885115
 -------------------------
-differenceValue is:  8.326302398531148
-differenceDelta is:  0.5734839004616845
+KnockIn Value is:  8.326302398531148
+KnockIn Delta is:  0.5734839004616845
 -------------------------
 
-real    10m27.486s
-user    10m25.910s
-sys     0m0.752s
+real    11m5.156s
+user    11m3.174s
+sys     0m0.692s
+
+TA's Correct Value:
+call price is 8.3514
+its delta is 0.5726
 """
