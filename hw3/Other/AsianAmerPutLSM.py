@@ -7,22 +7,30 @@ n = 100000
 m = 100
 Strike = 100
 r = 0.05
-dr = 0.0
 mT = 1
 
-np.random.seed(seed=0)
+
+T = mT / m
+
+np.random.seed(seed=123)
 
 GBM = np.zeros((n, m))
 
 for i in range(n):
 
-    GBM[i, :] = Spot * np.exp(np.cumsum(
-        ((r - dr) * (mT / m) - 0.5 * sigma * sigma * (mT / m)) + (sigma * (math.sqrt(mT / m))
-        * np.random.normal(0, 1, m))))
+    GBM[i, :] = Spot * np.exp(
+        np.cumsum(
+            (r - 0.5 * sigma ** 2) * T
+            + (sigma * math.sqrt(T) * np.random.normal(0, 1, m))
+        )
+    )
 
-    # rnormal = np.array([-1.3530204,-0.11307944, -1.21280941,  0.99634801,  0.2988387,0.69489436])
-    # GBM[i, :] = Spot * np.exp(np.cumsum(
-    #     ((r - dr) * (mT / m) - 0.5 * sigma * sigma * (mT / m)) + (sigma * (math.sqrt(mT / m))
+    # GBM[i, :] = Spot * np.exp(
+    #     np.cumsum(
+    #         (r - 0.5 * sigma ** 2) * T
+    #         + (sigma * math.sqrt(T) * np.random.normal(i/n, 0, m))
+    #     )
+    # )
     #                                                               * rnormal)))
 
 # print(GBM)
@@ -39,7 +47,7 @@ X = np.where(CFL > 0, GBM, 0)
 
 Xsh = X[:,:-1]
 
-Y1 = CFL * math.exp(-1 * r * (mT / m))
+Y1 = CFL * math.exp(-r * T)
 
 Y2 = np.concatenate((np.zeros((n, m - 1)), np.vstack(Y1[:, m-1])), axis=1)
 
@@ -54,7 +62,7 @@ for i in range(m-2, -1, -1):
         # CV[:, i] = reg1[2] + reg1[1] * Xsh[:,i] + reg1[0] * (Xsh[:,i] ** 2)
 
     CV[:, i] = np.nan_to_num(CV[:, i])
-    Y2[:, i] = np.where(CFL[:, i] > CV[:, i], Y1[:, i], Y2[:, i + 1] * math.exp(-1 * r * (mT / m)))
+    Y2[:, i] = np.where(CFL[:, i] > CV[:, i], Y1[:, i], Y2[:, i + 1] * math.exp(-r * T))
 
 CV = np.nan_to_num(CV)
 
@@ -75,10 +83,10 @@ FPOF = firstValueRow(POF)
 
 dFPOF = np.zeros((n,m))
 for i in range(m):
-    dFPOF[:, i] = FPOF[:, i] * math.exp(-1 * mT / m * r * i)
+    dFPOF[:, i] = FPOF[:, i] * math.exp(-T * r * (i + 1))
 
 PRICE = np.mean(np.sum(dFPOF, axis=1))
-STD = np.std(np.sum(dFPOF, axis=1)) / (n**2)
+STD = np.std(np.sum(dFPOF, axis=1)) / (n ** 0.5)
 
 print(PRICE)
 print(STD)
