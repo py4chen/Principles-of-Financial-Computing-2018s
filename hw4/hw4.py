@@ -1,5 +1,6 @@
 
 import numpy as np
+import copy
 from collections import OrderedDict
 
 
@@ -28,15 +29,15 @@ class EuropeanPutGarchModel:
 
     def buildTree(self):
         # Forward trees buildup using RT algorithm
-        for day in range(0, self.E):  # Days
+        for i in range(0, self.E):  # Days
             # Compute eta_tree[ i] and p_tree[i] using h2_tree[i].
             # print(sorted(h2_tree[i].keys()))
 
-            for node in sorted(self.h2_tree[day].keys()):
-                self.eta_tree[day][node] = [0 for _ in range(self.n2)]
-                self.p_tree[day][node] = [[0 for _ in range(2 * self.n1 + 1)] for _ in range(self.n2)]
-                for var in range(self.n2):
-                    h2 = self.h2_tree[day][node][var]
+            for j in sorted(self.h2_tree[i].keys()):
+                self.eta_tree[i][j] = [0 for _ in range(self.n2)]
+                self.p_tree[i][j] = [[0 for _ in range(2 * self.n1 + 1)] for _ in range(self.n2)]
+                for k in range(self.n2):
+                    h2 = self.h2_tree[i][j][k]
 
                     # Find eta
                     eta = int(np.ceil((h2 ** 0.5) / self.gamma))
@@ -51,57 +52,67 @@ class EuropeanPutGarchModel:
                     if eta == 0:
                         continue
 
-                    self.eta_tree[day][node][var] = eta
+                    self.eta_tree[i][j][k] = eta
 
                     # (2 * n1 + 1) coefficients of (pu * x ** 2 + pm * x + pd) ** n1
-                    tmp1 = h2 / (eta * eta * self.gamma * self.gamma)
-                    tmp2 = (self.r - h2 / 2.) / (2. * eta * self.gamma * (self.n1 ** .5))
-                    pu = tmp1 * 0.5 + tmp2
-                    pm = 1. - tmp1
-                    pd = tmp1 * 0.5 - tmp2
+                    pu = h2 / (eta * eta * self.gamma * self.gamma) * 0.5 + \
+                         (self.r - h2 / 2.) / (2. * eta * self.gamma * (self.n1 ** .5))
+                    pm = 1. - h2 / (eta * eta * self.gamma * self.gamma)
+                    pd = h2 / (eta * eta * self.gamma * self.gamma) * 0.5 - \
+                        (self.r - h2 / 2.) / (2. * eta * self.gamma * (self.n1 ** .5))
 
-                    print([pu, pm, pd])
-                    print(np.poly1d([pu, pm, pd]))
-                    print(n1)
-                    print(np.poly1d([pu, pm, pd])**n1)
-                    exit()
+                    # Calculate Prob
+                    factors = [[]]
+                    for _ in range(n1):
+                        tmp = []
+                        for o in [0, 1, 2]:
+                            for f in factors:
+                                f2 = copy.copy(f)
+                                f2.append(o)
+                                tmp.append(f2)
+                        factors = tmp
+                    umd = (pu, pm, pd)
+                    coefs = [0] * (2 * n1 + 1)
+                    for f in factors:
+                        tmp = 1
+                        counter = 0
+                        for f2 in f:
+                            tmp *= umd[f2]
+                            counter += f2
+                        coefs[counter] += tmp
 
-                    poly = np.poly1d([pu, pm, pd]) ** n1
-                    coefs = poly.c
-                    # coefs = [x ** self.n1 for x in [pu, pm, pd]]
-                    # print(coefs, pu ** n1)
                     for l in range(-self.n1, self.n1 + 1):
-                        self.p_tree[day][node][var][l + self.n1] = coefs[self.n1 - l]
+                        self.p_tree[i][j][k][l + self.n1] = coefs[self.n1 - l]
                         # print(eta_tree[i][j])
                         # print(p_tree[i][j])
 
             # Compute max./min. variances in h2_tree[i + 1].
-            for node in sorted(self.h2_tree[day].keys()):
-                for var in range(self.n2):
-                    eta = self.eta_tree[day][node][var]
+            for j in sorted(self.h2_tree[i].keys()):
+                for k in range(self.n2):
+                    eta = self.eta_tree[i][j][k]
                     if eta == 0:
                         continue
-                    h2 = self.h2_tree[day][node][var]
+                    h2 = self.h2_tree[i][j][k]
 
                     # get_next_h2
                     for l in range(-self.n1, self.n1 + 1):
-                        next_j = node + eta * l
+                        next_j = j + eta * l
                         epslon = (l * eta * self.gamma_n - self.r + h2 / 2.) / (h2 ** .5)
                         next_h2 = self.b0 + self.b1 * h2 + self.b2 * h2 * (epslon - self.c) ** 2.
-                        if next_j not in self.h2_tree[day + 1]:
-                            self.h2_tree[day + 1][next_j] = [next_h2 for _ in range(self.n2)]
+                        if next_j not in self.h2_tree[i + 1]:
+                            self.h2_tree[i + 1][next_j] = [next_h2 for _ in range(self.n2)]
                         else:
-                            min_ = self.h2_tree[day + 1][next_j][0]
-                            self.h2_tree[day + 1][next_j][0] = min(next_h2, min_)
-                            max_ = self.h2_tree[day + 1][next_j][-1]
-                            self.h2_tree[day + 1][next_j][-1] = max(next_h2, max_)
+                            min_ = self.h2_tree[i + 1][next_j][0]
+                            self.h2_tree[i + 1][next_j][0] = min(next_h2, min_)
+                            max_ = self.h2_tree[i + 1][next_j][-1]
+                            self.h2_tree[i + 1][next_j][-1] = max(next_h2, max_)
 
             # Interpolation of variances (for n2 > 2)
-            for next_j in sorted(self.h2_tree[day + 1].keys()):
-                min_ = self.h2_tree[day + 1][next_j][0]
-                max_ = self.h2_tree[day + 1][next_j][-1]
-                for var in range(self.n2):
-                    self.h2_tree[day + 1][next_j][var] = min_ + var * (max_ - min_) / (self.n2 - 1.)
+            for next_j in sorted(self.h2_tree[i + 1].keys()):
+                min_ = self.h2_tree[i + 1][next_j][0]
+                max_ = self.h2_tree[i + 1][next_j][-1]
+                for k in range(self.n2):
+                    self.h2_tree[i + 1][next_j][k] = min_ + k * (max_ - min_) / (self.n2 - 1.)
 
     def price(self):
         # Pricing at the last day
