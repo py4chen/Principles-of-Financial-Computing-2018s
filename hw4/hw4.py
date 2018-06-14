@@ -72,17 +72,17 @@ class EuropeanPutGarchModel:
                                 tmp.append(f2)
                         factors = tmp
                     umd = (pu, pm, pd)
-                    coefs = [0] * (2 * n1 + 1)
+                    cols = [0] * (2 * n1 + 1)
                     for f in factors:
                         tmp = 1
                         counter = 0
                         for f2 in f:
                             tmp *= umd[f2]
                             counter += f2
-                        coefs[counter] += tmp
+                        cols[counter] += tmp
 
                     for l in range(-self.n1, self.n1 + 1):
-                        self.P[i][j][k][l + self.n1] = coefs[self.n1 - l]
+                        self.P[i][j][k][l + self.n1] = cols[self.n1 - l]
                         # print(ETA[i][j])
                         # print(P[i][j])
 
@@ -94,25 +94,25 @@ class EuropeanPutGarchModel:
                         continue
                     h2 = self.H2[i][j][k]
 
-                    # get_next_h2
+                    # get_h2_next
                     for l in range(-self.n1, self.n1 + 1):
-                        next_j = j + eta * l
-                        epslon = (l * eta * self.gamma_n - self.r + h2 / 2.) / (h2 ** .5)
-                        next_h2 = self.b0 + self.b1 * h2 + self.b2 * h2 * (epslon - self.c) ** 2.
-                        if next_j not in self.H2[i + 1]:
-                            self.H2[i + 1][next_j] = [next_h2 for _ in range(self.n2)]
-                        else:
-                            min_ = self.H2[i + 1][next_j][0]
-                            self.H2[i + 1][next_j][0] = min(next_h2, min_)
-                            max_ = self.H2[i + 1][next_j][-1]
-                            self.H2[i + 1][next_j][-1] = max(next_h2, max_)
+                        j_next = j + eta * l
+                        epslon = (l * eta * self.gamma_n - self.r + h2 / 2.) / (h2 ** 0.5)
+                        h2_next = self.b0 + self.b1 * h2 + self.b2 * h2 * (epslon - self.c) ** 2.
+                        if j_next not in self.H2[i + 1]:
+                            self.H2[i + 1][j_next] = [h2_next for _ in range(self.n2)]
+
+                        min_ = self.H2[i + 1][j_next][0]
+                        max_ = self.H2[i + 1][j_next][-1]
+                        self.H2[i + 1][j_next][0] = min(h2_next, min_)
+                        self.H2[i + 1][j_next][-1] = max(h2_next, max_)
 
             # Interpolation of variances (for n2 > 2)
-            for next_j in sorted(self.H2[i + 1].keys()):
-                min_ = self.H2[i + 1][next_j][0]
-                max_ = self.H2[i + 1][next_j][-1]
-                for k in range(self.n2):
-                    self.H2[i + 1][next_j][k] = min_ + k * (max_ - min_) / (self.n2 - 1.)
+            for j_next in sorted(self.H2[i + 1].keys()):
+                h2_min = self.H2[i + 1][j_next][0]
+                h2_max = self.H2[i + 1][j_next][-1]
+                for mid in range(1, self.n2 - 1):
+                    self.H2[i + 1][j_next][mid] = h2_min + mid * (h2_max - h2_min) / float(self.n2 - 1)
 
     def price(self):
         # Pricing at the last day
@@ -135,20 +135,20 @@ class EuropeanPutGarchModel:
                     #
                     put = 0.
                     for l in range(-self.n1, self.n1 + 1):
-                        next_j = j + eta * l
+                        j_next = j + eta * l
                         eps = (l * eta * self.gamma_n - self.r + h2 / 2.) / (h2 ** .5)
-                        next_h2 = self.b0 + self.b1 * h2 + self.b2 * h2 * ((eps - self.c) ** 2.)
+                        h2_next = self.b0 + self.b1 * h2 + self.b2 * h2 * ((eps - self.c) ** 2.)
 
-                        # Find the next (k, k+1) interval bounding next_h2.
-                        for next_k in range(self.n2 - 1):
-                            low = self.H2[i + 1][next_j][next_k]
-                            up = self.H2[i + 1][next_j][next_k + 1]
-                            if low <= next_h2 <= up:
+                        # Find the next (k, k+1) interval bounding h2_next.
+                        for k_next in range(self.n2 - 1):
+                            low = self.H2[i + 1][j_next][k_next]
+                            high = self.H2[i + 1][j_next][k_next + 1]
+                            if low <= h2_next <= high:
                                 break
 
-                        x = (next_h2 - up) / (low - up) if low - up != 0 else 0
-                        put_ = x * put_tree[i + 1][next_j][next_k] + \
-                               (1. - x) * put_tree[i + 1][next_j][next_k + 1]
+                        x = (high - h2_next) / (high - low) if high - low != 0 else 0
+                        put_ = x * put_tree[i + 1][j_next][k_next] + \
+                               (1. - x) * put_tree[i + 1][j_next][k_next + 1]
 
                         put += self.P[i][j][k][l + self.n1] * put_
 
