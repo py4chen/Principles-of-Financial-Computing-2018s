@@ -2,6 +2,7 @@
 import numpy as np
 import copy
 import sys
+import math
 from collections import OrderedDict
 
 
@@ -22,15 +23,16 @@ class EuropeanPutGarchModel:
 
         self.gamma_n = h0 / (n1 ** .5)
 
-        self.ETA = [{} for _ in range(E)]
+        self.ETA = [dict() for _ in range(E)]
         # Variance tree
-        self.H2 = [{} for _ in range(E + 1)]  # [ {} * (days + 1) ]
-        self.H2[0][0] = [h0 ** 2 for _ in range(n2)] # H2[day][variance]
+        self.H2 = [dict() for _ in range(E + 1)]  # [ {} * (days + 1) ]
         # Probability tree
-        self.P = [{} for _ in range(E)]
+        self.P = [dict() for _ in range(E)]
 
     def buildTree(self):
         # Forward trees buildup using RT algorithm
+        self.H2[0][0] = [math.pow(self.gamma, 2) for _ in range(self.n2)]  # H2[day][variance]
+
         for i in range(0, self.E):  # Days
             # Compute ETA[ i] and P[i] using H2[i].
             # print(sorted(self.H2[i].keys()))
@@ -116,7 +118,7 @@ class EuropeanPutGarchModel:
 
     def price(self):
         # Pricing at the last day
-        put_tree = [{} for _ in range(self.E + 1)]
+        put_tree = [dict() for _ in range(self.E + 1)]
         for j in sorted(self.H2[-1].keys()):
             # put = max(stock * np.exp(h0 * j) - strike, 0.)
             put = max(self.X - self.S * np.exp(self.gamma_n * j), 0.)
@@ -133,7 +135,7 @@ class EuropeanPutGarchModel:
                     h2 = self.H2[i][j][k]
 
                     #
-                    put = 0.
+                    tmp = 0.
                     for l in range(-self.n1, self.n1 + 1):
                         j_next = j + eta * l
                         eps = (l * eta * self.gamma_n - self.r + h2 / 2.) / (h2 ** .5)
@@ -147,13 +149,13 @@ class EuropeanPutGarchModel:
                                 break
 
                         x = (high - h2_next) / (high - low) if high - low != 0 else 0
-                        put_ = x * put_tree[i + 1][j_next][k_next] + \
+                        put_next = x * put_tree[i + 1][j_next][k_next] + \
                                (1. - x) * put_tree[i + 1][j_next][k_next + 1]
 
-                        put += self.P[i][j][k][l + self.n1] * put_
+                        tmp += self.P[i][j][k][l + self.n1] * put_next
 
                     # American put pricing
-                    put_tree[i][j][k] = max(put / np.exp(self.r), 0)
+                    put_tree[i][j][k] = max(tmp / np.exp(self.r), 0)
 
         return put_tree[0][0][0]
 
