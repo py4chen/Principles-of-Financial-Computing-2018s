@@ -1,9 +1,7 @@
-
 import numpy as np
 import copy
 import sys
 import math
-from collections import OrderedDict
 
 
 class EuropeanPutGarchModel:
@@ -33,8 +31,8 @@ class EuropeanPutGarchModel:
         self.TREE[0].append(0)
         self.TREE_VAR[(0, 0)] = list()
         for k in range(self.n2):
-            self.H2[(0,0,k)] = self.gamma ** 2
-            self.TREE_VAR[(0,0)].append(k)
+            self.H2[(0, 0, k)] = self.gamma ** 2
+            self.TREE_VAR[(0, 0)].append(k)
 
         # Forward
         for i in range(0, self.E):  # Days
@@ -45,7 +43,7 @@ class EuropeanPutGarchModel:
                     for l in range(2 * self.n1 + 1):
                         self.P[(i, j, k, l)] = 0
                 for k in range(self.n2):
-                    h2 = self.H2[(i,j,k)]
+                    h2 = self.H2[(i, j, k)]
                     # Find eta
                     eta = int(np.ceil((h2 ** 0.5) / self.gamma))
                     for e in range(eta, sys.maxsize):
@@ -96,8 +94,8 @@ class EuropeanPutGarchModel:
 
                     for l in range(-self.n1, self.n1 + 1):
                         j_next = j + eta * l
-                        epslon = (l * eta * self.gamma_n - self.r + h2 / 2.) / (h2 ** 0.5)
-                        h2_next = self.b0 + self.b1 * h2 + self.b2 * h2 * (epslon - self.c) ** 2.
+                        epsilon = (l * eta * self.gamma_n - self.r + h2 / 2.) / (h2 ** 0.5)
+                        h2_next = self.b0 + self.b1 * h2 + self.b2 * h2 * (epsilon - self.c) ** 2.
                         if j_next not in self.TREE[i + 1]:
                             self.TREE[i + 1].append(j_next)
                             self.TREE_VAR[(i + 1, j_next)] = list()
@@ -156,8 +154,8 @@ class EuropeanPutGarchModel:
 
         return PRICE[(0, 0, 0)]
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     isAuto = input("Calculate example? (Y/N)")
     if(len(isAuto) == 0 or isAuto[0] == "Y" or isAuto[0] == "y"):
         # Test Case
@@ -199,9 +197,9 @@ if __name__ == "__main__":
         n1 = int(input("n1:"))
         n2 = int(input("n2:"))
 
-    r = r * .01 # %
+    r = r * .01  # %
 
-    model = EuropeanPutGarchModel(E ,r ,S ,h0,b0,b1,b2,c ,X ,n1,n2)
+    model = EuropeanPutGarchModel(E, r, S, h0, b0, b1, b2, c, X, n1, n2)
     model.buildTree()
     price = model.price()
     print("PRICE: ", price)
