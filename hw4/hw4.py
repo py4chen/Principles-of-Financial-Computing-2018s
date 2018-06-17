@@ -23,25 +23,29 @@ class EuropeanPutGarchModel:
 
         self.gamma_n = h0 / (n1 ** .5)
 
-        self.ETA = [dict() for _ in range(E)]
-        # Variance tree
-        self.H2 = [dict() for _ in range(E + 1)]  # [ {} * (days + 1) ]
-        # Probability tree
-        self.P = [dict() for _ in range(E)]
+        self.ETA = dict()
+        self.H2 = dict()
+        self.P = dict()
+        self.TREE = [list() for _ in range(E + 1)]
+        self.TREE_VAR = dict()
 
     def buildTree(self):
-        # Forward trees buildup using RT algorithm
-        self.H2[0][0] = [math.pow(self.gamma, 2) for _ in range(self.n2)]  # H2[day][variance]
+        self.TREE[0].append(0)
+        self.TREE_VAR[(0, 0)] = list()
+        for k in range(self.n2):
+            self.H2[(0,0,k)] = self.gamma ** 2
+            self.TREE_VAR[(0,0)].append(k)
 
+        # Forward
         for i in range(0, self.E):  # Days
-            # Compute ETA[ i] and P[i] using H2[i].
-            # print(sorted(self.H2[i].keys()))
-            for j in sorted(self.H2[i].keys()):
-                self.ETA[i][j] = [0 for _ in range(self.n2)]
-                self.P[i][j] = [[0 for _ in range(2 * self.n1 + 1)] for _ in range(self.n2)]
+            for j in self.TREE[i]:
                 for k in range(self.n2):
-                    h2 = self.H2[i][j][k]
-
+                    self.ETA[(i, j, k)] = 0
+                for k in range(self.n2):
+                    for l in range(2 * self.n1 + 1):
+                        self.P[(i, j, k, l)] = 0
+                for k in range(self.n2):
+                    h2 = self.H2[(i,j,k)]
                     # Find eta
                     eta = int(np.ceil((h2 ** 0.5) / self.gamma))
                     for e in range(eta, sys.maxsize):
@@ -54,16 +58,12 @@ class EuropeanPutGarchModel:
                     if eta == 0:
                         continue
 
-                    self.ETA[i][j][k] = eta
-
-                    # (2 * n1 + 1) coefficients of (pu * x ** 2 + pm * x + pd) ** n1
+                    self.ETA[(i, j, k)] = eta
                     pu = h2 / (eta * eta * self.gamma * self.gamma) * 0.5 + \
                          (self.r - h2 / 2.) / (2. * eta * self.gamma * (self.n1 ** .5))
                     pm = 1. - h2 / (eta * eta * self.gamma * self.gamma)
                     pd = h2 / (eta * eta * self.gamma * self.gamma) * 0.5 - \
                         (self.r - h2 / 2.) / (2. * eta * self.gamma * (self.n1 ** .5))
-
-                    # Calculate Prob
                     factors = [[]]
                     for _ in range(n1):
                         tmp = []
@@ -84,80 +84,77 @@ class EuropeanPutGarchModel:
                         cols[counter] += tmp
 
                     for l in range(-self.n1, self.n1 + 1):
-                        self.P[i][j][k][l + self.n1] = cols[self.n1 - l]
-                        # print(ETA[i][j])
-                        # print(P[i][j])
+                        self.P[(i, j, k, l + self.n1)] = cols[self.n1 - l]
 
-            # Compute max./min. variances in H2[i + 1].
-            for j in sorted(self.H2[i].keys()):
+            # max & min of variances
+            for j in self.TREE[i]:
                 for k in range(self.n2):
-                    eta = self.ETA[i][j][k]
+                    eta = self.ETA[(i, j, k)]
                     if eta == 0:
                         continue
-                    h2 = self.H2[i][j][k]
+                    h2 = self.H2[(i, j, k)]
 
-                    # get_h2_next
                     for l in range(-self.n1, self.n1 + 1):
                         j_next = j + eta * l
                         epslon = (l * eta * self.gamma_n - self.r + h2 / 2.) / (h2 ** 0.5)
                         h2_next = self.b0 + self.b1 * h2 + self.b2 * h2 * (epslon - self.c) ** 2.
-                        if j_next not in self.H2[i + 1]:
-                            self.H2[i + 1][j_next] = [h2_next for _ in range(self.n2)]
+                        if j_next not in self.TREE[i + 1]:
+                            self.TREE[i + 1].append(j_next)
+                            self.TREE_VAR[(i + 1, j_next)] = list()
+                            for k in range(self.n2):
+                                self.H2[(i + 1, j_next, k)] = h2_next
+                                self.TREE_VAR[(i + 1, j_next)].append(k)
 
-                        min_ = self.H2[i + 1][j_next][0]
-                        max_ = self.H2[i + 1][j_next][-1]
-                        self.H2[i + 1][j_next][0] = min(h2_next, min_)
-                        self.H2[i + 1][j_next][-1] = max(h2_next, max_)
+                        min_index = min(self.TREE_VAR[(i + 1, j_next)])
+                        max_index = max(self.TREE_VAR[(i + 1, j_next)])
+                        min_ = self.H2[(i + 1, j_next, min_index)]
+                        max_ = self.H2[(i + 1, j_next, max_index)]
+                        self.H2[(i + 1, j_next, min_index)] = min(h2_next, min_)
+                        self.H2[(i + 1, j_next, max_index)] = max(h2_next, max_)
 
-            # Interpolation of variances (for n2 > 2)
-            for j_next in sorted(self.H2[i + 1].keys()):
-                h2_min = self.H2[i + 1][j_next][0]
-                h2_max = self.H2[i + 1][j_next][-1]
+            # interpolation
+            for j_next in self.TREE[i+1]:
+                min_index = min(self.TREE_VAR[(i + 1, j_next)])
+                max_index = max(self.TREE_VAR[(i + 1, j_next)])
+                h2_min = self.H2[(i + 1, j_next, min_index)]
+                h2_max = self.H2[(i + 1, j_next, max_index)]
                 for mid in range(1, self.n2 - 1):
-                    self.H2[i + 1][j_next][mid] = h2_min + mid * (h2_max - h2_min) / float(self.n2 - 1)
+                    self.H2[(i + 1, j_next, mid)] = h2_min + mid * (h2_max - h2_min) / float(self.n2 - 1)
 
     def price(self):
-        # Pricing at the last day
-        put_tree = [dict() for _ in range(self.E + 1)]
-        for j in sorted(self.H2[-1].keys()):
-            # put = max(stock * np.exp(h0 * j) - strike, 0.)
+        PRICE = dict()
+        for j in self.TREE[-1]:
             put = max(self.X - self.S * np.exp(self.gamma_n * j), 0.)
-            put_tree[-1][j] = [put for _ in range(self.n2)]
+            for k in range(self.n2):
+                PRICE[(self.E, j, k)] = put
 
-        # Backward induction
+        # backward
         for i in range(self.E - 1, -1, -1):
-            for j in sorted(self.H2[i].keys()):
-                put_tree[i][j] = [put for _ in range(self.n2)]
+            for j in self.TREE[i]:
                 for k in range(self.n2):
-                    eta = self.ETA[i][j][k]
+                    eta = self.ETA[(i, j, k)]
                     if eta == 0:
                         continue
-                    h2 = self.H2[i][j][k]
+                    h2 = self.H2[(i, j, k)]
 
-                    #
                     tmp = 0.
                     for l in range(-self.n1, self.n1 + 1):
                         j_next = j + eta * l
                         eps = (l * eta * self.gamma_n - self.r + h2 / 2.) / (h2 ** .5)
                         h2_next = self.b0 + self.b1 * h2 + self.b2 * h2 * ((eps - self.c) ** 2.)
-
-                        # Find the next (k, k+1) interval bounding h2_next.
                         for k_next in range(self.n2 - 1):
-                            low = self.H2[i + 1][j_next][k_next]
-                            high = self.H2[i + 1][j_next][k_next + 1]
+                            low = self.H2[(i + 1, j_next, k_next)]
+                            high = self.H2[(i + 1, j_next, k_next + 1)]
                             if low <= h2_next <= high:
                                 break
-
                         x = (high - h2_next) / (high - low) if high - low != 0 else 0
-                        put_next = x * put_tree[i + 1][j_next][k_next] + \
-                               (1. - x) * put_tree[i + 1][j_next][k_next + 1]
+                        put_next = x * PRICE[(i + 1, j_next, k_next)] + \
+                               (1. - x) * PRICE[(i + 1, j_next, k_next + 1)]
+                        tmp += self.P[(i, j, k, l + self.n1)] * put_next
 
-                        tmp += self.P[i][j][k][l + self.n1] * put_next
+                    PRICE[(i, j, k)] = max(tmp / np.exp(self.r), 0)
 
-                    # American put pricing
-                    put_tree[i][j][k] = max(tmp / np.exp(self.r), 0)
-
-        return put_tree[0][0][0]
+        return PRICE[(0, 0, 0)]
 
 if __name__ == "__main__":
 
